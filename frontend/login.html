@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — ServiceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <!-- Left Panel -->
+    <div class="auth-left">
+      <a href="index.html" class="auth-logo">
+        <i class="fas fa-layer-group"></i>
+        <span>ServiceHub</span>
+      </a>
+      <div class="auth-left-content">
+        <h2>Welcome back!</h2>
+        <p>Log in to manage your service requests and track progress in real-time.</p>
+        <div class="auth-features">
+          <div class="auth-feat"><i class="fas fa-check-circle"></i> Track all your service requests</div>
+          <div class="auth-feat"><i class="fas fa-check-circle"></i> Real-time status updates</div>
+          <div class="auth-feat"><i class="fas fa-check-circle"></i> Secure & private dashboard</div>
+        </div>
+      </div>
+      <div class="auth-left-art">
+        <div class="art-circle c1"></div>
+        <div class="art-circle c2"></div>
+        <div class="art-circle c3"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="auth-right">
+      <div class="auth-form-wrap">
+        <div class="auth-form-header">
+          <h1>Sign In</h1>
+          <p>Enter your credentials to access your account</p>
+        </div>
+
+        <div id="alert-box" class="alert hidden"></div>
+
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com" required />
+            <span class="field-error" id="email-error"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="password"><i class="fas fa-lock"></i> Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="password" name="password" placeholder="••••••••" required />
+              <button type="button" class="toggle-password" onclick="togglePwd('password', 'pwd-eye')">
+                <i class="fas fa-eye" id="pwd-eye"></i>
+              </button>
+            </div>
+            <span class="field-error" id="password-error"></span>
+          </div>
+
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" id="remember" /> Remember me
+            </label>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submit-btn">
+            <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Sign In</span>
+            <span class="btn-loader hidden"><i class="fas fa-circle-notch fa-spin"></i> Signing in...</span>
+          </button>
+        </form>
+
+        <div class="auth-divider"><span>Demo Credentials</span></div>
+        <div class="demo-creds">
+          <div class="demo-card" onclick="fillDemo('admin@servicehub.com','Admin@123')">
+            <i class="fas fa-user-shield"></i>
+            <div><strong>Admin</strong><small>admin@servicehub.com</small></div>
+          </div>
+          <div class="demo-card" onclick="fillDemo('client@demo.com','Client@123')">
+            <i class="fas fa-user"></i>
+            <div><strong>Client Demo</strong><small>client@demo.com</small></div>
+          </div>
+        </div>
+
+        <p class="auth-switch">Don't have an account? <a href="register.html">Register now</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    // Redirect if already logged in
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (token && user) window.location.href = user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+
+    function fillDemo(email, pwd) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = pwd;
+    }
+
+    function togglePwd(inputId, iconId) {
+      const inp = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+      else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      let valid = true;
+
+      if (!email) { showFieldError('email-error', 'Email is required.'); valid = false; }
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('email-error', 'Enter a valid email.'); valid = false; }
+      if (!password) { showFieldError('password-error', 'Password is required.'); valid = false; }
+      if (!valid) return;
+
+      setLoading(true);
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) { showAlert(data.error || 'Login failed.', 'error'); return; }
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        showAlert('Login successful! Redirecting...', 'success');
+        setTimeout(() => { window.location.href = data.user.role === 'admin' ? 'admin.html' : 'dashboard.html'; }, 1000);
+      } catch {
+        showAlert('Network error. Please check your connection.', 'error');
+      } finally { setLoading(false); }
+    });
+  </script>
+</body>
+</html>
